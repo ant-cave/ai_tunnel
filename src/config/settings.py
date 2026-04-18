@@ -73,12 +73,26 @@ class Settings:
         """获取日志文件路径"""
         return self.logging.file
     
+    def __post_init__(self) -> None:
+        """dataclass 初始化后处理
+        
+        在 dataclass 自动初始化后执行额外的初始化逻辑
+        """
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+    
     def __init__(self, config_path: Optional[str] = None):
         """初始化设置
         
         Args:
             config_path: 配置文件路径
         """
+        # 先初始化 dataclass 的默认属性
+        self.server = ServerConfig()
+        self.security = SecurityConfig()
+        self.logging = LoggingConfig()
+        
+        # 然后根据配置路径加载
         if config_path:
             self._load_from_file(config_path)
         else:
