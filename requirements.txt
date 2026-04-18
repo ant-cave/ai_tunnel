@@ -1,15 +1,10 @@
 # AI Tunnel 项目依赖
 
 # 核心依赖
-# TOML 配置文件支持
-tomli>=2.0.1
-toml>=0.10.2
+# JSON 配置文件支持（Python 标准库内置）
 
 # 异步 HTTP 客户端/服务器
 aiohttp>=3.9.0
-
-# YAML 配置文件支持（可选）
-pyyaml>=6.0.1
 
 # 数据验证（可选，用于更复杂的配置验证）
 pydantic>=2.5.0

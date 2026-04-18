@@ -116,4 +116,4 @@ dmypy.json
 .pytype/
 .trae/specs
 
-configs/config.toml
+configs/config.json

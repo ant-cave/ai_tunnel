@@ -1,11 +1,11 @@
 """
 配置加载器模块
 
-负责加载和解析 TOML 配置文件，提供默认值处理。
+负责加载和解析 JSON 配置文件，提供默认值处理。
 """
+import json
 from pathlib import Path
 from typing import Optional
-from src.utils.toml_utils import load_toml
 from src.models.config import (
     Config,
     Provider,
@@ -18,7 +18,7 @@ class ConfigLoader:
     """
     配置加载器类
     
-    从 TOML 文件加载配置，并提供默认值填充功能。
+    从 JSON 文件加载配置，并提供默认值填充功能。
     """
     
     # 默认配置值
@@ -59,7 +59,7 @@ class ConfigLoader:
             
         Raises:
             FileNotFoundError: 配置文件不存在
-            Exception: TOML 文件解析失败
+            json.JSONDecodeError: JSON 文件解析失败
         """
         if config_path:
             self.config_path = Path(config_path)
@@ -70,8 +70,9 @@ class ConfigLoader:
         if not self.config_path.exists():
             raise FileNotFoundError(f"配置文件不存在：{self.config_path}")
         
-        # 读取并解析 TOML 文件
-        self._raw_config = load_toml(self.config_path)
+        # 读取并解析 JSON 文件
+        with open(self.config_path, "r", encoding="utf-8") as f:
+            self._raw_config = json.load(f)
         
         return self._build_config()
     

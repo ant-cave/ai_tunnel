@@ -45,8 +45,8 @@ class CLI:
             epilog="""
 示例:
   ai_tunnel start                      # 使用默认配置启动服务
-  ai_tunnel start -c config.toml       # 使用指定配置文件启动
-  ai_tunnel validate -c config.toml    # 验证配置文件
+  ai_tunnel start -c config.json       # 使用指定配置文件启动
+  ai_tunnel validate -c config.json    # 验证配置文件
   ai_tunnel init                       # 生成配置示例文件
             """
         )
@@ -95,7 +95,7 @@ class CLI:
             type=str,
             default=None,
             metavar="PATH",
-            help="配置文件路径 (默认：configs/config.toml)"
+            help="配置文件路径 (默认：configs/config.json)"
         )
         
         start_parser.add_argument(
@@ -171,9 +171,9 @@ class CLI:
         init_parser.add_argument(
             "-o", "--output",
             type=str,
-            default="config.toml",
+            default="config.json",
             metavar="PATH",
-            help="输出文件路径 (默认：config.toml)"
+            help="输出文件路径 (默认：config.json)"
         )
         
         init_parser.add_argument(
@@ -227,8 +227,8 @@ class CLI:
         
         if not config_path:
             default_paths = [
-                "configs/config.toml",
-                "config.toml",
+                "configs/config.json",
+                "config.json",
             ]
             for path in default_paths:
                 if Path(path).exists():

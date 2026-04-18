@@ -120,9 +120,9 @@ class AITunnel:
             settings = Settings(self.config_path)
         else:
             default_paths = [
-                "configs/config.toml",
-                "config.toml",
-                Path(__file__).parent.parent / "configs" / "config.toml",
+                "configs/config.json",
+                "config.json",
+                Path(__file__).parent.parent / "configs" / "config.json",
             ]
             
             for path in default_paths:
