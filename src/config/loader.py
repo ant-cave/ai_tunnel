@@ -3,9 +3,9 @@
 
 负责加载和解析 TOML 配置文件，提供默认值处理。
 """
-import tomllib
 from pathlib import Path
 from typing import Optional
+from src.utils.toml_utils import load_toml
 from src.models.config import (
     Config,
     Provider,
@@ -59,7 +59,7 @@ class ConfigLoader:
             
         Raises:
             FileNotFoundError: 配置文件不存在
-            tomllib.TOMLDecodeError: TOML 文件解析失败
+            Exception: TOML 文件解析失败
         """
         if config_path:
             self.config_path = Path(config_path)
@@ -71,8 +71,7 @@ class ConfigLoader:
             raise FileNotFoundError(f"配置文件不存在：{self.config_path}")
         
         # 读取并解析 TOML 文件
-        with open(self.config_path, "rb") as f:
-            self._raw_config = tomllib.load(f)
+        self._raw_config = load_toml(self.config_path)
         
         return self._build_config()
     
