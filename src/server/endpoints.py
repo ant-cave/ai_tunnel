@@ -326,30 +326,52 @@ class ChatCompletionsHandler(EndpointHandler):
         await response.prepare(request)
         
         try:
-            # 使用 AsyncRouter 的 route_stream_with_fallback 方法处理流式请求
             async for chunk in self.router.route_stream_with_fallback(client_request):
-                # 处理流式块
                 if chunk and hasattr(chunk, "to_dict"):
                     formatted_chunk = chunk.to_dict()
-                    await response.write(f"data: {json.dumps(formatted_chunk)}\n\n".encode('utf-8'))
-                    await response.drain()
+                    try:
+                        await response.write(f"data: {json.dumps(formatted_chunk)}\n\n".encode('utf-8'))
+                        await response.drain()
+                    except ConnectionResetError:
+                        self.logger.info("客户端已断开连接，停止流式传输")
+                        return response
+                    except Exception as write_error:
+                        if "closing transport" in str(write_error):
+                            self.logger.info("传输通道正在关闭，客户端可能已断开")
+                            return response
+                        raise
             
-            await response.write("data: [DONE]\n\n".encode('utf-8'))
-            await response.drain()
+            try:
+                await response.write("data: [DONE]\n\n".encode('utf-8'))
+                await response.drain()
+            except ConnectionResetError:
+                self.logger.info("客户端已断开连接，跳过完成标记发送")
+            except Exception as write_error:
+                if "closing transport" not in str(write_error):
+                    raise
             
+        except ConnectionResetError:
+            self.logger.info("客户端在流式处理过程中断开连接")
+            return response
         except Exception as e:
             self.logger.exception(f"流式处理失败：{e}")
-            error_data = {
-                "error": {
-                    "message": str(e),
-                    "type": "stream_error",
-                    "code": "stream_error"
+            try:
+                error_data = {
+                    "error": {
+                        "message": str(e),
+                        "type": "stream_error",
+                        "code": "stream_error"
+                    }
                 }
-            }
-            await response.write(f"data: {json.dumps(error_data)}\n\n".encode('utf-8'))
-            await response.drain()
+                await response.write(f"data: {json.dumps(error_data)}\n\n".encode('utf-8'))
+                await response.drain()
+            except Exception:
+                pass
         finally:
-            await response.write_eof()
+            try:
+                await response.write_eof()
+            except Exception:
+                pass
         
         return response
     
