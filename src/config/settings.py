@@ -34,6 +34,9 @@ class SecurityConfig:
     allowed_origins: List[str] = field(default_factory=lambda: ["*"])
     rate_limit: int = 100  # 每分钟请求数限制
     encryption_enabled: bool = True
+    admin_username: str = "admin"
+    admin_password: str = "admin123"
+    admin_token_secret: str = "ai-tunnel-secret-key"
 
 
 @dataclass
@@ -91,6 +94,7 @@ class Settings:
         self.server = ServerConfig()
         self.security = SecurityConfig()
         self.logging = LoggingConfig()
+        self.config_path = config_path  # 保存配置路径，供热重载使用
         
         # 然后根据配置路径加载
         if config_path:
@@ -120,6 +124,13 @@ class Settings:
             if "security" in config_data:
                 security_data = config_data["security"]
                 self.security = SecurityConfig(**security_data)
+                # 处理管理员认证配置
+                if "admin_username" in security_data:
+                    self.security.admin_username = security_data["admin_username"]
+                if "admin_password" in security_data:
+                    self.security.admin_password = security_data["admin_password"]
+                if "admin_token_secret" in security_data:
+                    self.security.admin_token_secret = security_data["admin_token_secret"]
             
             # 更新日志配置
             if "logging" in config_data:

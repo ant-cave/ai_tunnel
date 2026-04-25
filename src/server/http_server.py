@@ -279,6 +279,28 @@ class HTTPServer:
         """添加 DELETE 路由"""
         self.add_route(path, handler, method="DELETE", name=name)
     
+    def add_static(self, prefix: str, path: str, name: Optional[str] = None) -> None:
+        """注册静态文件路由
+
+        Args:
+            prefix: URL 前缀
+            path: 静态文件目录路径
+            name: 路由名称
+        """
+        static_path = Path(path).resolve()
+        if not static_path.exists():
+            self.logger.warning(f"静态文件目录不存在：{static_path}")
+            return
+
+        if not static_path.is_dir():
+            self.logger.warning(f"静态文件路径不是目录：{static_path}")
+            return
+
+        if self._app:
+            self._app.router.add_static(prefix, str(static_path), name=name)
+
+        self.logger.info(f"注册静态文件路由：{prefix} -> {static_path}")
+
     def add_middleware(self, middleware: Callable) -> None:
         """添加中间件
         
@@ -737,6 +759,28 @@ class HTTPSServer:
         """添加 DELETE 路由"""
         self.add_route(path, handler, method="DELETE", name=name)
     
+    def add_static(self, prefix: str, path: str, name: Optional[str] = None) -> None:
+        """注册静态文件路由
+
+        Args:
+            prefix: URL 前缀
+            path: 静态文件目录路径
+            name: 路由名称
+        """
+        static_path = Path(path).resolve()
+        if not static_path.exists():
+            self.logger.warning(f"静态文件目录不存在：{static_path}")
+            return
+
+        if not static_path.is_dir():
+            self.logger.warning(f"静态文件路径不是目录：{static_path}")
+            return
+
+        if self._app:
+            self._app.router.add_static(prefix, str(static_path), name=name)
+
+        self.logger.info(f"注册静态文件路由：{prefix} -> {static_path}")
+
     async def start(self) -> None:
         """启动服务器"""
         try:
@@ -928,6 +972,20 @@ class DualModeServer:
         """添加 POST 路由"""
         self.add_route(path, handler, "POST", name)
     
+    def add_static(self, prefix: str, path: str, name: Optional[str] = None) -> None:
+        """注册静态文件路由到所有服务器
+
+        Args:
+            prefix: URL 前缀
+            path: 静态文件目录路径
+            name: 路由名称
+        """
+        if self._http_server:
+            self._http_server.add_static(prefix, path, name)
+
+        if self._https_server:
+            self._https_server.add_static(prefix, path, name)
+
     def get_stats(self) -> Dict[str, Dict[str, Any]]:
         """获取所有服务器统计信息"""
         stats = {}

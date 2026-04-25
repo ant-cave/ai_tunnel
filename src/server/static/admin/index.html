@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tunnel 管理面板</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <nav id="navbar" class="navbar hidden">
+            <div class="nav-brand">
+                <i class="fas fa-tunnel"></i>
+                <span>AI Tunnel</span>
+            </div>
+            <div class="nav-links">
+                <a href="#" data-page="dashboard" class="nav-link active">
+                    <i class="fas fa-chart-bar"></i> 仪表盘
+                </a>
+                <a href="#" data-page="providers" class="nav-link">
+                    <i class="fas fa-server"></i> 提供者
+                </a>
+                <a href="#" data-page="config" class="nav-link">
+                    <i class="fas fa-cog"></i> 配置
+                </a>
+                <a href="#" data-page="logs" class="nav-link">
+                    <i class="fas fa-list"></i> 日志
+                </a>
+                <a href="#" data-page="status" class="nav-link">
+                    <i class="fas fa-heartbeat"></i> 系统状态
+                </a>
+            </div>
+            <div class="nav-actions">
+                <button id="logout-btn" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </button>
+            </div>
+        </nav>
+
+        <main id="main-content">
+            <section id="page-login" class="page active">
+                <div class="login-container">
+                    <div class="login-card">
+                        <div class="login-header">
+                            <i class="fas fa-tunnel fa-3x"></i>
+                            <h1>AI Tunnel 管理面板</h1>
+                            <p>请输入管理员凭证登录</p>
+                        </div>
+                        <form id="login-form" class="login-form" autocomplete="off">
+                            <div class="form-group">
+                                <label for="login-username">
+                                    <i class="fas fa-user"></i> 用户名
+                                </label>
+                                <input type="text" id="login-username" placeholder="请输入用户名" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="login-password">
+                                    <i class="fas fa-lock"></i> 密码
+                                </label>
+                                <input type="password" id="login-password" placeholder="请输入密码" required>
+                            </div>
+                            <div id="login-error" class="login-error hidden">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span></span>
+                            </div>
+                            <button type="submit" id="login-btn" class="btn btn-primary btn-block">
+                                <i class="fas fa-sign-in-alt"></i> 登录
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-dashboard" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-chart-bar"></i> 仪表盘</h2>
+                </div>
+                <div class="stats-grid" id="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-uptime">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-uptime">0</span>
+                            <span class="stat-label">运行时间</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-requests">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-requests">0</span>
+                            <span class="stat-label">总请求数</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-errors">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-errors">0</span>
+                            <span class="stat-label">错误数</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-providers">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-providers">0</span>
+                            <span class="stat-label">提供者数</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-heartbeat"></i> 提供者健康状态</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table" id="dashboard-provider-table">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>健康状态</th>
+                                        <th>模型数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-provider-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-providers" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-server"></i> 提供者管理</h2>
+                    <button id="add-provider-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 添加提供者
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table" id="provider-table">
+                                <thead>
+                                    <tr>
+                                        <th>名称</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>健康状态</th>
+                                        <th>模型数</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="provider-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-config" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-cog"></i> 配置管理</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-globe"></i> 服务器配置</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="config-server-form" class="config-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="config-host">主机地址</label>
+                                    <input type="text" id="config-host" class="config-input">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-port">端口</label>
+                                    <input type="number" id="config-port" class="config-input">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="config-workers">工作进程数</label>
+                                    <input type="number" id="config-workers" class="config-input">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-max-connections">最大连接数</label>
+                                    <input type="number" id="config-max-connections" class="config-input">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="config-keep-alive">保持连接超时 (秒)</label>
+                                    <input type="number" id="config-keep-alive" class="config-input">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-request-timeout">请求超时 (秒)</label>
+                                    <input type="number" id="config-request-timeout" class="config-input">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-shield-alt"></i> 安全配置</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="config-security-form" class="config-form">
+                            <div class="form-group">
+                                <label for="config-rate-limit">速率限制 (每分钟请求数)</label>
+                                <input type="number" id="config-rate-limit" class="config-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="config-allowed-origins">允许的源 (逗号分隔)</label>
+                                <input type="text" id="config-allowed-origins" class="config-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="config-encryption-enabled">
+                                    <span>启用加密</span>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-alt"></i> 日志配置</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="config-logging-form" class="config-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="config-log-level">日志级别</label>
+                                    <select id="config-log-level" class="config-input">
+                                        <option value="DEBUG">DEBUG</option>
+                                        <option value="INFO">INFO</option>
+                                        <option value="WARNING">WARNING</option>
+                                        <option value="ERROR">ERROR</option>
+                                        <option value="CRITICAL">CRITICAL</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-log-file">日志文件路径</label>
+                                    <input type="text" id="config-log-file" class="config-input" placeholder="留空则输出到控制台">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="config-log-max-size">最大文件大小 (MB)</label>
+                                    <input type="number" id="config-log-max-size" class="config-input">
+                                </div>
+                                <div class="form-group">
+                                    <label for="config-log-backup-count">备份文件数</label>
+                                    <input type="number" id="config-log-backup-count" class="config-input">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="page-actions">
+                    <button id="save-config-btn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> 保存配置
+                    </button>
+                </div>
+            </section>
+
+            <section id="page-logs" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-list"></i> 日志查看器</h2>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="log-filters">
+                            <div class="form-group">
+                                <label for="log-level"><i class="fas fa-filter"></i> 级别</label>
+                                <select id="log-level" class="config-input">
+                                    <option value="">ALL</option>
+                                    <option value="DEBUG">DEBUG</option>
+                                    <option value="INFO">INFO</option>
+                                    <option value="WARNING">WARNING</option>
+                                    <option value="ERROR">ERROR</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="log-search"><i class="fas fa-search"></i> 关键词</label>
+                                <input type="text" id="log-search" class="config-input" placeholder="搜索日志内容...">
+                            </div>
+                            <div class="form-group log-actions">
+                                <button id="refresh-logs-btn" class="btn btn-primary">
+                                    <i class="fas fa-sync-alt"></i> 刷新
+                                </button>
+                                <label class="checkbox-label auto-refresh-label">
+                                    <input type="checkbox" id="auto-refresh">
+                                    <span>自动刷新</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-logs" id="log-table">
+                                <thead>
+                                    <tr>
+                                        <th>时间戳</th>
+                                        <th>级别</th>
+                                        <th>名称</th>
+                                        <th>消息</th>
+                                        <th>文件位置</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="log-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="log-empty hidden" id="log-empty">
+                            <i class="fas fa-inbox fa-3x"></i>
+                            <p>暂无日志记录</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-status" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-heartbeat"></i> 系统状态</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-info-circle"></i> 运行信息</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="status-grid" id="status-info">
+                            <div class="status-item">
+                                <span class="status-label">运行状态</span>
+                                <span class="status-value" id="status-running">
+                                    <span class="badge badge-success"><i class="fas fa-circle"></i> 运行中</span>
+                                </span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">版本</span>
+                                <span class="status-value" id="status-version">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">主机</span>
+                                <span class="status-value" id="status-host">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">端口</span>
+                                <span class="status-value" id="status-port">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">SSL</span>
+                                <span class="status-value" id="status-ssl">
+                                    <span class="badge badge-danger"><i class="fas fa-times"></i> 未启用</span>
+                                </span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">日志级别</span>
+                                <span class="status-value" id="status-log-level">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">速率限制</span>
+                                <span class="status-value" id="status-rate-limit">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-project-diagram"></i> 路由器状态</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="status-grid" id="router-status">
+                            <div class="status-item">
+                                <span class="status-label">提供者总数</span>
+                                <span class="status-value" id="router-total-providers">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">健康提供者</span>
+                                <span class="status-value" id="router-healthy-providers">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">已启用提供者</span>
+                                <span class="status-value" id="router-enabled-providers">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">活跃连接数</span>
+                                <span class="status-value" id="router-active-connections">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="page-actions">
+                    <button id="restart-btn" class="btn btn-danger btn-lg">
+                        <i class="fas fa-redo-alt"></i> 重启服务
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="provider-modal" class="modal hidden">
+        <div class="modal-overlay" id="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title"><i class="fas fa-server"></i> 添加提供者</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="provider-form">
+                    <input type="hidden" id="provider-original-name">
+                    <div class="form-group">
+                        <label for="provider-name">名称</label>
+                        <input type="text" id="provider-name" class="config-input" placeholder="例如：openai-gpt4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="provider-type">类型</label>
+                        <select id="provider-type" class="config-input" required>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="azure">Azure</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="provider-base-url">API 端点</label>
+                        <input type="text" id="provider-base-url" class="config-input" placeholder="例如：https://api.openai.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="provider-api-key">API 密钥</label>
+                        <input type="password" id="provider-api-key" class="config-input" placeholder="输入 API 密钥">
+                    </div>
+                    <div class="form-group">
+                        <label for="provider-models">模型列表 (逗号分隔)</label>
+                        <input type="text" id="provider-models" class="config-input" placeholder="例如：gpt-4,gpt-3.5-turbo">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="provider-enabled" checked>
+                            <span>启用</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">取消</button>
+                <button class="btn btn-primary" id="modal-save">
+                    <i class="fas fa-save"></i> 保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="notification-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

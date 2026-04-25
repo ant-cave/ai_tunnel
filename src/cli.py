@@ -254,8 +254,23 @@ class CLI:
                 import os
                 os.environ["AI_TUNNEL_PORT"] = str(args.port)
             
-            asyncio.run(tunnel.start())
-            return 0
+            # 使用自定义的事件循环来处理 Windows 信号
+            if sys.platform == "win32":
+                # Windows 平台需要特殊处理
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(tunnel.start())
+                    return 0
+                except KeyboardInterrupt:
+                    print("\n[信息] 服务已中断")
+                    return 0
+                finally:
+                    loop.close()
+            else:
+                # Unix/Linux 平台使用标准方式
+                asyncio.run(tunnel.start())
+                return 0
             
         except KeyboardInterrupt:
             print("\n[信息] 服务已中断")

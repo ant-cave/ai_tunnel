@@ -8,6 +8,7 @@ AI Tunnel 主程序模块
 import asyncio
 import logging
 import signal
+import sys
 from typing import Optional, List
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from src.utils.logger import setup_logger, get_logger
 from src.utils.exceptions import AITunnelError, ConfigurationError
 from src.server.http_server import HTTPServer
 from src.server.endpoints import create_endpoint_handlers
+from src.server.admin.routes import register_admin_routes
 from src.router.router import AsyncRouter, RouterConfig
 from src.router.provider_manager import ProviderConfig, ProviderType
 
@@ -44,16 +46,80 @@ class AITunnel:
         self.router: Optional[AsyncRouter] = None
         self._running: bool = False
         self._shutdown_event = asyncio.Event()
+        self._sigint_count: int = 0  # SIGINT 计数器
+        self._sigint_time: Optional[float] = None  # 上次 SIGINT 时间
+        self._force_shutdown: bool = False  # 强制关闭标志
         
         self._setup_signal_handlers()
     
     def _setup_signal_handlers(self) -> None:
         """设置信号处理器"""
         try:
-            signal.signal(signal.SIGINT, self._signal_handler)
-            signal.signal(signal.SIGTERM, self._signal_handler)
-        except ValueError:
+            # Windows 环境下使用不同的信号处理方式
+            if sys.platform == "win32":
+                # Windows 平台使用专门的 Ctrl+C 处理
+                self._setup_windows_signal_handlers()
+            else:
+                # Unix/Linux 平台使用标准信号处理
+                if hasattr(signal, 'SIGINT'):
+                    signal.signal(signal.SIGINT, self._signal_handler)
+                if hasattr(signal, 'SIGTERM'):
+                    signal.signal(signal.SIGTERM, self._signal_handler)
+        except (ValueError, AttributeError):
+            # 信号处理失败，忽略错误
             pass
+    
+    def _setup_windows_signal_handlers(self) -> None:
+        """设置 Windows 专用的信号处理器"""
+        try:
+            # Windows 平台使用 Ctrl+C 处理
+            import ctypes
+            
+            # 定义 Windows API 函数
+            kernel32 = ctypes.windll.kernel32
+            
+            # 设置控制台控制处理器
+            @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)
+            def console_handler(ctrl_type):
+                if ctrl_type in (0, 1, 2):  # CTRL_C_EVENT, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT
+                    # 检测连续两次 Ctrl+C
+                    import time
+                    current_time = time.time()
+                    if self._sigint_time and current_time - self._sigint_time < 2.0:
+                        # 在2秒内接收到第二次 Ctrl+C，强制退出
+                        self._sigint_count += 1
+                        if self._sigint_count >= 2:
+                            if self.logger:
+                                self.logger.warning("接收到连续两次 Ctrl+C，强制退出...")
+                            self._force_shutdown = True
+                            # 直接退出进程
+                            import os
+                            os._exit(1)
+                    else:
+                        # 第一次 Ctrl+C 或超过时间窗口
+                        self._sigint_count = 1
+                        self._sigint_time = current_time
+                    
+                    if self.logger:
+                        self.logger.info("接收到 Windows 控制台事件，正在关闭服务...")
+                    if self._shutdown_event and not self._shutdown_event.is_set():
+                        self._shutdown_event.set()
+                    return True  # 表示已处理
+                return False
+            
+            # 注册控制台处理器
+            kernel32.SetConsoleCtrlHandler(console_handler, True)
+            
+        except Exception as e:
+            # Windows 信号处理失败，回退到标准方式
+            if self.logger:
+                self.logger.warning(f"Windows 信号处理设置失败：{e}")
+            try:
+                # 尝试使用标准信号处理
+                if hasattr(signal, 'SIGINT'):
+                    signal.signal(signal.SIGINT, self._signal_handler)
+            except Exception:
+                pass
     
     def _signal_handler(self, signum, frame) -> None:
         """信号处理函数
@@ -62,10 +128,31 @@ class AITunnel:
             signum: 信号编号
             frame: 当前帧
         """
-        sig_name = signal.Signals(signum).name
+        sig_name = signal.Signals(signum).name if hasattr(signal, 'Signals') else f"信号{signum}"
+        
+        # 检测连续两次 SIGINT
+        current_time = asyncio.get_event_loop().time()
+        if self._sigint_time and current_time - self._sigint_time < 2.0:
+            # 在2秒内接收到第二次 SIGINT，强制退出
+            self._sigint_count += 1
+            if self._sigint_count >= 2:
+                if self.logger:
+                    self.logger.warning("接收到连续两次 SIGINT，强制退出...")
+                self._force_shutdown = True
+                # 直接退出进程
+                import os
+                os._exit(1)
+        else:
+            # 第一次 SIGINT 或超过时间窗口
+            self._sigint_count = 1
+            self._sigint_time = current_time
+        
         if self.logger:
             self.logger.info(f"接收到信号：{sig_name}，正在关闭服务...")
-        self._shutdown_event.set()
+        
+        # 在事件循环中设置关闭事件，避免阻塞
+        if self._shutdown_event and not self._shutdown_event.is_set():
+            self._shutdown_event.set()
     
     async def initialize(self) -> None:
         """初始化应用程序
@@ -128,7 +215,8 @@ class AITunnel:
             for path in default_paths:
                 if Path(path).exists():
                     self.logger.info(f"从默认路径加载配置：{path}")
-                    settings = Settings(str(path))
+                    self.config_path = str(path)
+                    settings = Settings(self.config_path)
                     break
             else:
                 self.logger.warning("未找到配置文件，使用默认配置")
@@ -343,6 +431,18 @@ class AITunnel:
         self.server.add_get("/status", handlers["status"].handle, name="status")
         
         self.logger.info(f"注册了 {len(handlers)} 个端点")
+        
+        try:
+            register_admin_routes(
+                server=self.server,
+                settings=self.settings,
+                router=self.router,
+                config_path=self.config_path,
+                app=self
+            )
+            self.logger.info("管理后台路由注册成功")
+        except Exception as e:
+            self.logger.warning(f"管理后台路由注册失败：{e}")
     
     async def start(self) -> None:
         """启动 AI Tunnel 服务
@@ -364,7 +464,8 @@ class AITunnel:
         try:
             await self.server.start()
             
-            await self._wait_for_shutdown()
+            # 使用异步轮询而不是阻塞等待，避免信号处理被阻塞
+            await self._wait_for_shutdown_async()
             
         except KeyboardInterrupt:
             self.logger.info("接收到键盘中断信号")
@@ -375,8 +476,21 @@ class AITunnel:
             await self.stop()
     
     async def _wait_for_shutdown(self) -> None:
-        """等待关闭信号"""
+        """等待关闭信号（阻塞方式）"""
         await self._shutdown_event.wait()
+    
+    async def _wait_for_shutdown_async(self) -> None:
+        """异步等待关闭信号
+        
+        使用异步轮询避免阻塞事件循环，确保信号能够及时处理
+        """
+        while not self._shutdown_event.is_set():
+            try:
+                # 使用短时间等待，避免阻塞事件循环
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=1.0)
+            except asyncio.TimeoutError:
+                # 超时是正常的，继续轮询
+                continue
     
     async def stop(self) -> None:
         """停止 AI Tunnel 服务
@@ -387,6 +501,12 @@ class AITunnel:
             return
         
         self._running = False
+        
+        # 检查是否强制关闭
+        if self._force_shutdown:
+            self.logger.warning("强制关闭服务，跳过优雅关闭...")
+            return
+        
         self.logger.info("正在停止 AI Tunnel 服务...")
         
         if self.server:
